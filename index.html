@@ -305,7 +305,7 @@
 <body>
 
 <div class="container">
-    <h1>📂 Sistem Pembaca Data Siswa (Excel Dapodik)</h1>
+    <h1>📂 Sistem Pembaca Data Siswa</h1>
     
     <!-- Error Message Container -->
     <div id="global-error" class="status-msg error"></div>
@@ -342,12 +342,6 @@
             <tbody id="tableBody"></tbody>
         </table>
     </div>
-
-    <!-- On-Page Stats Section -->
-    <div id="statsResultSection" class="stats-result-container">
-        <h2 style="margin-bottom:15px; color:var(--primary); border-bottom:2px solid #eee; padding-bottom:10px;">Laporan Statistik</h2>
-        <div id="statsContent"></div>
-    </div>
 </div>
 
 <!-- MODAL: Mapping Kolom (Pengganti Prompt) -->
@@ -378,6 +372,18 @@
             <button class="btn-action btn-delete" onclick="closeModal('mappingModal')">Batal</button>
             <button class="btn-action btn-primary" onclick="saveMapping()">Simpan & Tampilkan</button>
         </div>
+    </div>
+</div>
+
+<!-- MODAL: Statistik Lengkap -->
+<div id="statsModal" class="modal">
+    <div class="modal-content" style="max-width: 95%; width: 1200px;">
+        <span class="close" onclick="closeModal('statsModal')">&times;</span>
+        <div class="modal-header">
+            <h2>📊 Laporan Statistik Siswa</h2>
+            <p style="margin:0; font-size:13px; color:#666;">Statistik lengkap berdasarkan gender, agama, dan kelas/rombel.</p>
+        </div>
+        <div id="statsModalContent" style="max-height: 70vh; overflow: auto;"></div>
     </div>
 </div>
 
@@ -417,17 +423,14 @@
         const messageDiv = document.getElementById('message');
         const tableWrapper = document.getElementById('tableWrapper');
         const controls = document.getElementById('controls');
-        const statsSection = document.getElementById('statsResultSection');
         
         // Reset UI
         messageDiv.innerHTML = "";
         messageDiv.className = "status-msg";
         tableWrapper.style.display = 'none';
         controls.style.display = 'none';
-        statsSection.style.display = 'none';
         document.getElementById('tableHead').innerHTML = "";
         document.getElementById('tableBody').innerHTML = "";
-        document.getElementById('statsContent').innerHTML = "";
         
         // Reset Mapping
         columnMapping = { jk: null, agama: null, rombel: null };
@@ -801,9 +804,8 @@
     }
 
     function displayAllStatsOnPage() {
-        const statsSection = document.getElementById('statsResultSection');
-        const statsContent = document.getElementById('statsContent');
-        // ... (rest of the code remains the same)
+        const statsModal = document.getElementById('statsModal');
+        const statsModalContent = document.getElementById('statsModalContent');
         
         let html = "";
         const types = [
@@ -820,11 +822,8 @@
             }
         });
 
-        statsContent.innerHTML = html;
-        statsSection.style.display = "block";
-        
-        // Scroll to stats
-        statsSection.scrollIntoView({ behavior: 'smooth' });
+        statsModalContent.innerHTML = html;
+        statsModal.style.display = "block";
     }
 
     function buildStatsHTML(type, title, dataMap, agamaKeys) {
@@ -1067,9 +1066,6 @@
             messageDiv.className = "status-msg success";
             messageDiv.innerText = `${checkboxes.length} data berhasil dihapus.`;
             renumberTable();
-            
-            // Hide stats as they are now invalid
-            document.getElementById('statsResultSection').style.display = 'none';
         }
     }
 
