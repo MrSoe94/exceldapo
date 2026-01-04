@@ -54,10 +54,9 @@
             border: 1px solid #ccc;
             border-radius: 4px;
         }
-        /* Tombol Hapus Baru */
         .btn-delete {
             padding: 10px 20px;
-            background-color: #dc3545; /* Merah */
+            background-color: #dc3545;
             color: white;
             border: none;
             border-radius: 4px;
@@ -67,10 +66,6 @@
         }
         .btn-delete:hover {
             background-color: #c82333;
-        }
-        .btn-delete:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
         }
 
         table {
@@ -86,11 +81,17 @@
             white-space: nowrap; 
             overflow-x: hidden; 
         }
-        /* Styling khusus kolom checkbox */
         th:first-child, td:first-child {
             width: 50px;
             text-align: center;
         }
+        /* Kolom No. dibuat kecil dan rata tengah */
+        th:nth-child(2), td:nth-child(2) {
+            width: 50px;
+            text-align: center;
+            font-weight: bold;
+        }
+
         th {
             background-color: #0056b3;
             color: white;
@@ -138,7 +139,7 @@
 <body>
 
 <div class="container">
-    <h1>📂 Pembaca Data Siswa (Fitur Hapus)</h1>
+    <h1>📂 Pembaca Data Siswa (No. Otomatis)</h1>
     
     <div id="error-message">Gagal memuat library Excel. Cek internet Anda.</div>
     
@@ -151,8 +152,6 @@
     <div class="controls" id="controls">
         <label>Cari Data:</label>
         <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Ketik: Nama, Kelas, NISN...">
-        
-        <!-- Tombol Hapus -->
         <button class="btn-delete" onclick="deleteSelectedRows()">🗑️ Hapus Terpilih</button>
     </div>
 
@@ -265,28 +264,29 @@
         
         const headerRow = document.createElement('tr');
 
-        // 1. Tambah Header "Pilih" di awal
         const thSelect = document.createElement('th');
         thSelect.textContent = "Pilih";
-        thSelect.onclick = null; // Kolom ini tidak bisa di-sort
+        thSelect.onclick = null; 
         thSelect.style.cursor = "default";
-        thSelect.style.width = "50px";
         headerRow.appendChild(thSelect);
 
-        // 2. Render Header Data
         headers.forEach((headerText, index) => {
             const th = document.createElement('th');
             th.textContent = headerText;
-            th.onclick = () => sortTable(index);
+            // Hanya kolom no (index 0 dari headers) yg kita set off klik
+            if (index === 0) {
+                th.onclick = null;
+                th.style.cursor = "default";
+            } else {
+                th.onclick = () => sortTable(index);
+            }
             headerRow.appendChild(th);
         });
         thead.appendChild(headerRow);
 
-        // 3. Render Body
         rows.forEach(row => {
             const tr = document.createElement('tr');
 
-            // Tambah Checkbox di awal setiap baris
             const tdCheck = document.createElement('td');
             tdCheck.style.textAlign = 'center';
             const checkbox = document.createElement('input');
@@ -295,7 +295,7 @@
             tdCheck.appendChild(checkbox);
             tr.appendChild(tdCheck);
 
-            // Tambah Data Siswa
+            // Kolom No diabaikan isinya saat render awal karena akan ditimpa fungsi renumberTable
             for (let i = 0; i < headers.length; i++) {
                 const td = document.createElement('td');
                 const cellValue = row[i];
@@ -304,9 +304,30 @@
             }
             tbody.appendChild(tr);
         });
+
+        // Renumber saat pertama kali load
+        renumberTable();
     }
 
-    // --- FUNGSI HAPUS DATA ---
+    // --- FUNGSI UTAMA: RENOMORASI OTOMATIS ---
+    function renumberTable() {
+        const table = document.getElementById("dataTable");
+        const tbody = table.querySelector("tbody");
+        const rows = tbody.querySelectorAll("tr");
+        let counter = 1;
+
+        rows.forEach((row) => {
+            // Hanya beri nomor pada baris yang TERLIHAT
+            if (row.style.display !== "none") {
+                // Kolom index 1 (setelah checkbox) adalah kolom No
+                row.cells[1].innerText = counter++;
+            } else {
+                row.cells[1].innerText = "-"; // Opsional: Kosongkan nomor baris tersembunyi
+            }
+        });
+    }
+    // ----------------------------------------
+
     function deleteSelectedRows() {
         const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
         
@@ -319,17 +340,18 @@
             const tbody = document.getElementById('tableBody');
             const messageDiv = document.getElementById('message');
             
-            // Hapus setiap baris yang checkboxnya tercentang
             checkboxes.forEach(checkbox => {
                 const row = checkbox.closest('tr');
                 row.remove();
             });
 
             messageDiv.className = "success";
-            messageDiv.innerText = `${checkboxes.length} data berhasil dihapus dari tampilan.`;
+            messageDiv.innerText = `${checkboxes.length} data berhasil dihapus.`;
+            
+            // Panggil renumberTable setelah hapus
+            renumberTable();
         }
     }
-    // ------------------------
 
     function searchTable() {
         const input = document.getElementById("searchInput");
@@ -338,7 +360,6 @@
         const tr = table.getElementsByTagName("tr");
 
         for (let i = 1; i < tr.length; i++) {
-            // Mulai dari 1 karena kolom ke-0 adalah Checkbox
             const tds = tr[i].getElementsByTagName("td");
             let found = false;
 
@@ -358,6 +379,9 @@
                 tr[i].style.display = "none";
             }
         }
+
+        // Panggil renumberTable setelah search
+        renumberTable();
     }
 
     function sortTable(n) {
@@ -373,7 +397,6 @@
         }
 
         rows.sort((rowA, rowB) => {
-            // +1 karena index 0 adalah kolom checkbox
             let cellA = rowA.getElementsByTagName("td")[n + 1];
             let cellB = rowB.getElementsByTagName("td")[n + 1];
             
@@ -401,7 +424,6 @@
 
         rows.forEach(row => tbody.appendChild(row));
 
-        // Index +1 untuk menyesuaikan dengan header (karena ada kolom checkbox di awal)
         const headers = table.querySelectorAll("th");
         headers.forEach((th, index) => {
             if (index === n + 1) {
@@ -411,6 +433,9 @@
                 th.textContent = th.textContent.replace(" ▲", "").replace(" ▼", "");
             }
         });
+
+        // Panggil renumberTable setelah sort
+        renumberTable();
     }
 </script>
 
