@@ -543,16 +543,19 @@
                 th.onclick = () => sortTable(index);
                 th.style.cursor = "pointer";
             }
+            
+            // Tambahkan kolom Detail sebelum kolom Nama (index 1)
+            if (index === 1) {
+                const thDetail = document.createElement('th');
+                thDetail.textContent = "Detail";
+                thDetail.style.width = "80px";
+                thDetail.style.textAlign = "center";
+                thDetail.style.cursor = "default";
+                headerRow.appendChild(thDetail);
+            }
+            
             headerRow.appendChild(th);
         });
-
-        // Kolom Aksi
-        const thDetail = document.createElement('th');
-        thDetail.textContent = "Detail";
-        thDetail.style.width = "80px";
-        thDetail.style.textAlign = "center";
-        thDetail.style.cursor = "default";
-        headerRow.appendChild(thDetail);
 
         thead.appendChild(headerRow);
 
@@ -569,24 +572,27 @@
             tdCheck.appendChild(checkbox);
             tr.appendChild(tdCheck);
 
-            // Data Cells
+            // Data Cells dengan Detail sebelum Nama
             for (let i = 0; i < headers.length; i++) {
+                // Tambahkan kolom Detail sebelum kolom Nama (index 1)
+                if (i === 1) {
+                    const tdDetail = document.createElement('td');
+                    tdDetail.style.textAlign = 'center';
+                    const btnDetail = document.createElement('button');
+                    btnDetail.className = "btn-view";
+                    btnDetail.textContent = "👁️";
+                    btnDetail.title = "Lihat Detail";
+                    btnDetail.onclick = () => showDetail(row);
+                    tdDetail.appendChild(btnDetail);
+                    tr.appendChild(tdDetail);
+                }
+                
+                // Data cell biasa
                 const td = document.createElement('td');
                 const cellValue = row[i];
                 td.textContent = (cellValue !== undefined && cellValue !== '*') ? cellValue : '-';
                 tr.appendChild(td);
             }
-
-            // Tombol Detail
-            const tdDetail = document.createElement('td');
-            tdDetail.style.textAlign = 'center';
-            const btnDetail = document.createElement('button');
-            btnDetail.className = "btn-view";
-            btnDetail.textContent = "👁️";
-            btnDetail.title = "Lihat Detail";
-            btnDetail.onclick = () => showDetail(row);
-            tdDetail.appendChild(btnDetail);
-            tr.appendChild(tdDetail);
 
             tbody.appendChild(tr);
         });
@@ -884,50 +890,7 @@
         return html;
     }
 
-    // --- ACTION FUNCTIONS ---
-
-    function generateTablePreview() {
-        const table = document.getElementById("dataTable");
-        const tbody = table.querySelector("tbody");
-        const rows = Array.from(tbody.querySelectorAll("tr"));
-        const headers = Array.from(table.querySelectorAll("th")).map(th => th.textContent);
-
-        const visibleRows = rows.filter(row => row.style.display !== "none");
-
-        if (visibleRows.length === 0) {
-            alert("Tidak ada data yang tampil untuk digenerate.");
-            return;
-        }
-
-        const cleanHeaders = headers.slice(1, -1); 
-
-        let html = "<table class='stats-table-inner'><thead><tr>";
-        cleanHeaders.forEach(h => html += "<th>" + h + "</th>");
-        html += "</tr></thead><tbody>";
-
-        visibleRows.forEach(row => {
-            const cells = Array.from(row.querySelectorAll("td"));
-            html += "<tr>";
-            for(let i=0; i < cleanHeaders.length; i++) {
-                html += "<td>" + cells[i+1].textContent + "</td>";
-            }
-            html += "</tr>";
-        });
-
-        html += "</tbody></table>";
-        html += "<div style='margin-top:10px; text-align:right; font-weight:bold;'>Total Baris: " + visibleRows.length + "</div>";
-
-        document.getElementById("previewBody").innerHTML = html;
-        document.getElementById("previewModal").style.display = "block";
-    }
-
     function exportSpecificStats(type) {
-        // Find the specific card in the DOM to export
-        // Since we don't have IDs on every card, we rely on the logic to rebuild or just find the table in view.
-        // A simple way: Re-render in a hidden div, export, then remove. 
-        // OR: Just let user use the main display.
-        // Better: Re-create the data and export to excel directly without DOM.
-        
         const data = getStatsData(type);
         if(!data) return;
         
@@ -948,11 +911,11 @@
         aoa.push(headerRow);
 
         // Rows
-        let keys = Object.keys(data.dataMap).sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
-        let grandTotal = 0;
-        let totalL = 0, totalP = 0;
+        let dataKeys = Object.keys(data.dataMap).sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
+        let dataGrandTotal = 0;
+        let dataTotalL = 0, dataTotalP = 0;
 
-        keys.forEach((key, idx) => {
+        dataKeys.forEach((key, idx) => {
             let row = [idx+1, key];
             let item = data.dataMap[key];
             let rowTotal = 0;
@@ -960,7 +923,7 @@
             if(type.includes('gender')) {
                 row.push(item.L, item.P);
                 rowTotal = item.L + item.P;
-                totalL += item.L; totalP += item.P;
+                dataTotalL += item.L; dataTotalP += item.P;
             } else {
                 data.uniqueCats.forEach(k => {
                     let val = item.agamaCounts[k] || 0;
@@ -970,20 +933,20 @@
             }
             row.push(rowTotal);
             aoa.push(row);
-            grandTotal += rowTotal;
+            dataGrandTotal += rowTotal;
         });
 
         // Total Row
         let totalRow = ["-", "TOTAL"];
         if(type.includes('gender')) {
-            totalRow.push(totalL, totalP);
+            totalRow.push(dataTotalL, dataTotalP);
         } else {
             data.uniqueCats.forEach(k => {
-                let sum = keys.reduce((acc, key) => acc + (data.dataMap[key].agamaCounts[k]||0), 0);
+                let sum = dataKeys.reduce((acc, key) => acc + (data.dataMap[key].agamaCounts[k]||0), 0);
                 totalRow.push(sum);
             });
         }
-        totalRow.push(grandTotal);
+        totalRow.push(dataGrandTotal);
         aoa.push(totalRow);
 
         let ws = XLSX.utils.aoa_to_sheet(aoa);
