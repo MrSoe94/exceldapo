@@ -1111,8 +1111,16 @@
         }
 
         rows.sort((rowA, rowB) => {
-            let cellA = rowA.getElementsByTagName("td")[n + 1];
-            let cellB = rowB.getElementsByTagName("td")[n + 1];
+            // Adjust index for Detail column: 
+            // Original index 0 = checkbox, index 1 = detail, so data starts at index 2
+            // For sorting, we need to account for the Detail column at position 1
+            let cellIndex = n + 2; // Original: checkbox + data columns
+            if (n >= 1) {
+                cellIndex = n + 2; // Add 2 for checkbox and detail columns
+            }
+            
+            let cellA = rowA.getElementsByTagName("td")[cellIndex];
+            let cellB = rowB.getElementsByTagName("td")[cellIndex];
 
             let valA = cellA.textContent.trim();
             let valB = cellB.textContent.trim();
@@ -1138,13 +1146,18 @@
 
         rows.forEach(row => tbody.appendChild(row));
 
+        // Update header indicators - account for checkbox and detail columns
         const headers = table.querySelectorAll("th");
         headers.forEach((th, index) => {
-            if (index === n + 1) {
-                th.textContent = th.textContent.replace(" ▲", "").replace(" ▼", "");
-                th.textContent += lastSortDirection === 'asc' ? " ▲" : " ▼";
-            } else {
-                th.textContent = th.textContent.replace(" ▲", "").replace(" ▼", "");
+            // Skip checkbox (index 0) and detail (index 1) columns
+            if (index >= 2) {
+                const dataColIndex = index - 2; // Convert to data column index
+                if (dataColIndex === n) {
+                    th.textContent = th.textContent.replace(" ▲", "").replace(" ▼", "");
+                    th.textContent += lastSortDirection === 'asc' ? " ▲" : " ▼";
+                } else {
+                    th.textContent = th.textContent.replace(" ▲", "").replace(" ▼", "");
+                }
             }
         });
         renumberTable();
