@@ -45,14 +45,34 @@
             display: none; 
             gap: 10px;
             align-items: center;
+            flex-wrap: wrap;
         }
         input[type="text"] {
             padding: 10px;
             font-size: 16px;
-            width: 350px; /* Sedikit lebih lebar */
+            width: 350px; 
             border: 1px solid #ccc;
             border-radius: 4px;
         }
+        /* Tombol Hapus Baru */
+        .btn-delete {
+            padding: 10px 20px;
+            background-color: #dc3545; /* Merah */
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .btn-delete:hover {
+            background-color: #c82333;
+        }
+        .btn-delete:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -65,6 +85,11 @@
             text-align: left;
             white-space: nowrap; 
             overflow-x: hidden; 
+        }
+        /* Styling khusus kolom checkbox */
+        th:first-child, td:first-child {
+            width: 50px;
+            text-align: center;
         }
         th {
             background-color: #0056b3;
@@ -113,7 +138,7 @@
 <body>
 
 <div class="container">
-    <h1>📂 Pembaca Data Siswa (Search Lengkap)</h1>
+    <h1>📂 Pembaca Data Siswa (Fitur Hapus)</h1>
     
     <div id="error-message">Gagal memuat library Excel. Cek internet Anda.</div>
     
@@ -124,9 +149,11 @@
     </div>
 
     <div class="controls" id="controls">
-        <label>Cari Data (Semua Kolom):</label>
-        <!-- Placeholder diubah agar user tahu bisa mencari apa saja -->
-        <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Ketik: Nama, Kelas, NISN, Ayah, Alamat...">
+        <label>Cari Data:</label>
+        <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Ketik: Nama, Kelas, NISN...">
+        
+        <!-- Tombol Hapus -->
+        <button class="btn-delete" onclick="deleteSelectedRows()">🗑️ Hapus Terpilih</button>
     </div>
 
     <div class="table-container">
@@ -238,6 +265,15 @@
         
         const headerRow = document.createElement('tr');
 
+        // 1. Tambah Header "Pilih" di awal
+        const thSelect = document.createElement('th');
+        thSelect.textContent = "Pilih";
+        thSelect.onclick = null; // Kolom ini tidak bisa di-sort
+        thSelect.style.cursor = "default";
+        thSelect.style.width = "50px";
+        headerRow.appendChild(thSelect);
+
+        // 2. Render Header Data
         headers.forEach((headerText, index) => {
             const th = document.createElement('th');
             th.textContent = headerText;
@@ -246,8 +282,20 @@
         });
         thead.appendChild(headerRow);
 
+        // 3. Render Body
         rows.forEach(row => {
             const tr = document.createElement('tr');
+
+            // Tambah Checkbox di awal setiap baris
+            const tdCheck = document.createElement('td');
+            tdCheck.style.textAlign = 'center';
+            const checkbox = document.createElement('input');
+            checkbox.type = "checkbox";
+            checkbox.className = "row-checkbox";
+            tdCheck.appendChild(checkbox);
+            tr.appendChild(tdCheck);
+
+            // Tambah Data Siswa
             for (let i = 0; i < headers.length; i++) {
                 const td = document.createElement('td');
                 const cellValue = row[i];
@@ -258,8 +306,31 @@
         });
     }
 
-    // --- FUNGSI SEARCH DIPERBARUI ---
-    // Sekarang mencari di SEMUA kolom baris tersebut
+    // --- FUNGSI HAPUS DATA ---
+    function deleteSelectedRows() {
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+        
+        if (checkboxes.length === 0) {
+            alert("Tidak ada data yang dipilih.");
+            return;
+        }
+
+        if (confirm(`Apakah Anda yakin ingin menghapus ${checkboxes.length} data terpilih?`)) {
+            const tbody = document.getElementById('tableBody');
+            const messageDiv = document.getElementById('message');
+            
+            // Hapus setiap baris yang checkboxnya tercentang
+            checkboxes.forEach(checkbox => {
+                const row = checkbox.closest('tr');
+                row.remove();
+            });
+
+            messageDiv.className = "success";
+            messageDiv.innerText = `${checkboxes.length} data berhasil dihapus dari tampilan.`;
+        }
+    }
+    // ------------------------
+
     function searchTable() {
         const input = document.getElementById("searchInput");
         const filter = input.value.toUpperCase();
@@ -267,23 +338,20 @@
         const tr = table.getElementsByTagName("tr");
 
         for (let i = 1; i < tr.length; i++) {
-            // Ambil semua cell (td) dalam baris ini
+            // Mulai dari 1 karena kolom ke-0 adalah Checkbox
             const tds = tr[i].getElementsByTagName("td");
             let found = false;
 
-            // Loop melalui setiap cell di baris ini
-            for (let j = 0; j < tds.length; j++) {
+            for (let j = 1; j < tds.length; j++) {
                 if (tds[j]) {
                     let txtValue = tds[j].textContent || tds[j].innerText;
-                    // Jika salah satu cell cocok dengan kata kunci
                     if (txtValue.toUpperCase().indexOf(filter) > -1) {
                         found = true;
-                        break; // Cukup ketemu di 1 kolom saja, langsung stop cek
+                        break;
                     }
                 }
             }
 
-            // Tampilkan jika ditemukan, sembunyikan jika tidak
             if (found) {
                 tr[i].style.display = "";
             } else {
@@ -291,7 +359,6 @@
             }
         }
     }
-    // ---------------------------------
 
     function sortTable(n) {
         const table = document.getElementById("dataTable");
@@ -306,8 +373,9 @@
         }
 
         rows.sort((rowA, rowB) => {
-            let cellA = rowA.getElementsByTagName("td")[n];
-            let cellB = rowB.getElementsByTagName("td")[n];
+            // +1 karena index 0 adalah kolom checkbox
+            let cellA = rowA.getElementsByTagName("td")[n + 1];
+            let cellB = rowB.getElementsByTagName("td")[n + 1];
             
             let valA = cellA.textContent.trim();
             let valB = cellB.textContent.trim();
@@ -333,9 +401,10 @@
 
         rows.forEach(row => tbody.appendChild(row));
 
+        // Index +1 untuk menyesuaikan dengan header (karena ada kolom checkbox di awal)
         const headers = table.querySelectorAll("th");
         headers.forEach((th, index) => {
-            if (index === n) {
+            if (index === n + 1) {
                 th.textContent = th.textContent.replace(" ▲", "").replace(" ▼", "");
                 th.textContent += lastSortDirection === 'asc' ? " ▲" : " ▼";
             } else {
