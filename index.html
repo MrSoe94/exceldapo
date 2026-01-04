@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baca Data Siswa (Excel Reader)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 100%; 
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .upload-section {
+            border: 2px dashed #007bff;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            background-color: #f9faff;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .upload-section:hover {
+            background-color: #e6f0ff;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: none; 
+            gap: 10px;
+            align-items: center;
+        }
+        input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            width: 300px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px; /* Font sedikit lebih kecil agar muat banyak kolom */
+            display: none; 
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            white-space: nowrap; 
+            overflow-x: hidden; 
+        }
+        th {
+            background-color: #0056b3;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            font-size: 11px; /* Kecilkan font header judul panjang */
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #e6f0ff;
+        }
+        .error {
+            color: red;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .success {
+            color: green;
+            text-align: center;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .table-container {
+            overflow-x: auto; 
+            height: 600px;
+        }
+        #error-message {
+            color: red;
+            background: #ffe6e6;
+            padding: 10px;
+            border: 1px solid red;
+            display: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📂 Pembaca Data Peserta Didik (Multi-Header)</h1>
+    
+    <div id="error-message">Gagal memuat library Excel. Cek internet Anda.</div>
+    
+    <div class="upload-section" onclick="document.getElementById('fileInput').click()">
+        <p>Klik di sini untuk memilih file Excel (.xlsx)</p>
+        <input type="file" id="fileInput" accept=".xlsx, .xls" onchange="handleFile(this)">
+        <div id="message"></div>
+    </div>
+
+    <div class="controls" id="controls">
+        <label>Cari Nama Siswa:</label>
+        <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Ketik nama...">
+    </div>
+
+    <div class="table-container">
+        <table id="dataTable">
+            <thead id="tableHead"></thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    if (typeof XLSX === 'undefined') {
+        document.getElementById('error-message').style.display = 'block';
+        document.querySelector('.upload-section').style.display = 'none';
+    }
+
+    function handleFile(input) {
+        const file = input.files[0];
+        const messageDiv = document.getElementById('message');
+        const table = document.getElementById('dataTable');
+        const controls = document.getElementById('controls');
+        
+        messageDiv.innerHTML = "";
+        table.style.display = 'none';
+        controls.style.display = 'none';
+        document.getElementById('tableHead').innerHTML = "";
+        document.getElementById('tableBody').innerHTML = "";
+
+        if (!file) return;
+
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                
+                const sheetName = workbook.SheetNames.find(name => name.includes("Daftar Peserta Didik")) || workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+
+                if (jsonData.length < 5) {
+                    throw new Error("File terlalu pendek atau format salah.");
+                }
+
+                // 1. Cari Header Utama (Baris yang ada "No" dan "Nama")
+                let mainHeaderIndex = -1;
+                for (let i = 0; i < jsonData.length; i++) {
+                    const row = jsonData[i];
+                    if (row.length > 2 && row[0] == "No" && row[1] == "Nama") {
+                        mainHeaderIndex = i;
+                        break;
+                    }
+                }
+
+                if (mainHeaderIndex === -1) {
+                    throw new Error("Header 'No' dan 'Nama' tidak ditemukan.");
+                }
+
+                // 2. Ambil Baris Header Atas dan Baris Sub-Header (Baris di bawahnya)
+                const topHeaders = jsonData[mainHeaderIndex];
+                const bottomHeaders = jsonData[mainHeaderIndex + 1]; // Baris berikutnya
+                
+                // 3. Mulai Data 2 baris setelah Header Utama
+                let dataRows = jsonData.slice(mainHeaderIndex + 2);
+
+                // 4. Filter baris spacer/baris kosong
+                dataRows = dataRows.filter(row => row.length > 0);
+
+                // 5. MERGE HEADER (Gabungkan 2 baris header menjadi 1)
+                const mergedHeaders = [];
+                for (let i = 0; i < topHeaders.length; i++) {
+                    const top = (topHeaders[i] === '*' || topHeaders[i] === undefined) ? '' : topHeaders[i];
+                    const bottom = (bottomHeaders[i] === '*' || bottomHeaders[i] === undefined) ? '' : bottomHeaders[i];
+                    
+                    let finalText = "";
+                    
+                    // Logika Penggabungan
+                    if (top && bottom) {
+                        finalText = top + " - " + bottom; // Contoh: Data Ayah - Nama
+                    } else if (bottom) {
+                        finalText = bottom; // Jika atas kosong, pakai bawah (Contoh: * + Tahun Lahir -> Tahun Lahir)
+                    } else if (top) {
+                        finalText = top; // Jika bawah kosong, pakai atas
+                    } else {
+                        finalText = "Kolom " + (i+1); // Fallback
+                    }
+
+                    mergedHeaders.push(finalText);
+                }
+
+                renderTable(mergedHeaders, dataRows);
+                
+                messageDiv.className = "success";
+                messageDiv.innerText = `Berhasil! Ditemukan ${dataRows.length} data siswa.`;
+                table.style.display = 'table';
+                controls.style.display = 'flex';
+
+            } catch (error) {
+                console.error(error);
+                messageDiv.className = "error";
+                messageDiv.innerText = error.message || "Gagal membaca file.";
+            }
+        };
+
+        reader.readAsArrayBuffer(file);
+    }
+
+    function renderTable(headers, rows) {
+        const thead = document.getElementById('tableHead');
+        const tbody = document.getElementById('tableBody');
+        const headerRow = document.createElement('tr');
+
+        // Render Header Gabungan
+        headers.forEach((headerText, index) => {
+            const th = document.createElement('th');
+            th.textContent = headerText;
+            // Jangan sembunyikan kolom, biarkan semua muncul agar user bisa lihat struktur lengkap
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+
+        // Render Body
+        rows.forEach(row => {
+            const tr = document.createElement('tr');
+            
+            // Loop berdasarkan jumlah headers agar kolom sejajar penuh
+            for (let i = 0; i < headers.length; i++) {
+                const td = document.createElement('td');
+                const cellValue = row[i];
+                td.textContent = (cellValue !== undefined && cellValue !== '*') ? cellValue : '-';
+                tr.appendChild(td);
+            }
+            tbody.appendChild(tr);
+        });
+    }
+
+    function searchTable() {
+        const input = document.getElementById("searchInput");
+        const filter = input.value.toUpperCase();
+        const table = document.getElementById("dataTable");
+        const tr = table.getElementsByTagName("tr");
+
+        for (let i = 1; i < tr.length; i++) {
+            let td = tr[i].getElementsByTagName("td")[1]; // Cari di kolom Nama (Index 1)
+            if (td) {
+                let txtValue = td.textContent || td.innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }       
+        }
+    }
+</script>
+
+</body>
+</html>
