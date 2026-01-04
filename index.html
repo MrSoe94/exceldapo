@@ -56,7 +56,7 @@
         }
         .btn-delete {
             padding: 10px 20px;
-            background-color: #dc3545;
+            background-color: #dc3545; 
             color: white;
             border: none;
             border-radius: 4px;
@@ -66,6 +66,19 @@
         }
         .btn-delete:hover {
             background-color: #c82333;
+        }
+        .btn-export {
+            padding: 10px 20px;
+            background-color: #28a745; 
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .btn-export:hover {
+            background-color: #218838;
         }
 
         table {
@@ -85,7 +98,6 @@
             width: 50px;
             text-align: center;
         }
-        /* Kolom No. dibuat kecil dan rata tengah */
         th:nth-child(2), td:nth-child(2) {
             width: 50px;
             text-align: center;
@@ -152,7 +164,9 @@
     <div class="controls" id="controls">
         <label>Cari Data:</label>
         <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Ketik: Nama, Kelas, NISN...">
+        
         <button class="btn-delete" onclick="deleteSelectedRows()">🗑️ Hapus Terpilih</button>
+        <button class="btn-export" onclick="exportToExcel()">📥 Export Excel</button>
     </div>
 
     <div class="table-container">
@@ -164,7 +178,6 @@
 </div>
 
 <script>
-    // Variabel untuk tracking sorting
     let lastSortedCol = -1;
     let lastSortDirection = 'asc'; 
 
@@ -259,7 +272,9 @@
     function renderTable(headers, rows) {
         const thead = document.getElementById('tableHead');
         const tbody = document.getElementById('tableBody');
-        thead.innerHTML = "";
+        
+        // PERBAIKAN DI SINI: Mengubah 'constad.innerHTML' menjadi 'thead.innerHTML'
+        thead.innerHTML = ""; 
         tbody.innerHTML = "";
         
         const headerRow = document.createElement('tr');
@@ -273,7 +288,6 @@
         headers.forEach((headerText, index) => {
             const th = document.createElement('th');
             th.textContent = headerText;
-            // Hanya kolom no (index 0 dari headers) yg kita set off klik
             if (index === 0) {
                 th.onclick = null;
                 th.style.cursor = "default";
@@ -295,7 +309,6 @@
             tdCheck.appendChild(checkbox);
             tr.appendChild(tdCheck);
 
-            // Kolom No diabaikan isinya saat render awal karena akan ditimpa fungsi renumberTable
             for (let i = 0; i < headers.length; i++) {
                 const td = document.createElement('td');
                 const cellValue = row[i];
@@ -305,11 +318,46 @@
             tbody.appendChild(tr);
         });
 
-        // Renumber saat pertama kali load
         renumberTable();
     }
 
-    // --- FUNGSI UTAMA: RENOMORASI OTOMATIS ---
+    function exportToExcel() {
+        const table = document.getElementById("dataTable");
+        const tbody = table.querySelector("tbody");
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+        const headers = Array.from(table.querySelectorAll("th")).map(th => th.textContent);
+
+        const dataToExport = [];
+
+        const exportHeaders = headers.slice(1); 
+        dataToExport.push(exportHeaders);
+
+        let visibleRowCount = 0;
+        rows.forEach(row => {
+            if (row.style.display !== "none") {
+                visibleRowCount++;
+                const cells = Array.from(row.querySelectorAll("td"));
+                const rowData = [];
+                for (let i = 1; i < cells.length; i++) {
+                    rowData.push(cells[i].textContent);
+                }
+                dataToExport.push(rowData);
+            }
+        });
+
+        if (visibleRowCount === 0) {
+            alert("Tidak ada data untuk di-export.");
+            return;
+        }
+
+        const ws = XLSX.utils.aoa_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Data_Siswa");
+
+        const date = new Date().toISOString().slice(0,10);
+        XLSX.writeFile(wb, `Data_Siswa_Ekspor_${date}.xlsx`);
+    }
+
     function renumberTable() {
         const table = document.getElementById("dataTable");
         const tbody = table.querySelector("tbody");
@@ -317,16 +365,13 @@
         let counter = 1;
 
         rows.forEach((row) => {
-            // Hanya beri nomor pada baris yang TERLIHAT
             if (row.style.display !== "none") {
-                // Kolom index 1 (setelah checkbox) adalah kolom No
                 row.cells[1].innerText = counter++;
             } else {
-                row.cells[1].innerText = "-"; // Opsional: Kosongkan nomor baris tersembunyi
+                row.cells[1].innerText = "-";
             }
         });
     }
-    // ----------------------------------------
 
     function deleteSelectedRows() {
         const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
@@ -348,7 +393,6 @@
             messageDiv.className = "success";
             messageDiv.innerText = `${checkboxes.length} data berhasil dihapus.`;
             
-            // Panggil renumberTable setelah hapus
             renumberTable();
         }
     }
@@ -380,7 +424,6 @@
             }
         }
 
-        // Panggil renumberTable setelah search
         renumberTable();
     }
 
@@ -434,7 +477,6 @@
             }
         });
 
-        // Panggil renumberTable setelah sort
         renumberTable();
     }
 </script>
