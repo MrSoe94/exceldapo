@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Baca Data Siswa (Excel Reader)</title>
+    <title>Baca Data Siswa (Search Semua Kolom)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body {
@@ -49,14 +49,14 @@
         input[type="text"] {
             padding: 10px;
             font-size: 16px;
-            width: 300px;
+            width: 350px; /* Sedikit lebih lebar */
             border: 1px solid #ccc;
             border-radius: 4px;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px; /* Font sedikit lebih kecil agar muat banyak kolom */
+            font-size: 13px;
             display: none; 
         }
         th, td {
@@ -72,7 +72,12 @@
             position: sticky;
             top: 0;
             z-index: 10;
-            font-size: 11px; /* Kecilkan font header judul panjang */
+            font-size: 11px;
+            cursor: pointer; 
+            user-select: none;
+        }
+        th:hover {
+            background-color: #004494;
         }
         tr:nth-child(even) {
             background-color: #f9f9f9;
@@ -108,7 +113,7 @@
 <body>
 
 <div class="container">
-    <h1>📂 Pembaca Data Peserta Didik (Multi-Header)</h1>
+    <h1>📂 Pembaca Data Siswa (Search Lengkap)</h1>
     
     <div id="error-message">Gagal memuat library Excel. Cek internet Anda.</div>
     
@@ -119,8 +124,9 @@
     </div>
 
     <div class="controls" id="controls">
-        <label>Cari Nama Siswa:</label>
-        <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Ketik nama...">
+        <label>Cari Data (Semua Kolom):</label>
+        <!-- Placeholder diubah agar user tahu bisa mencari apa saja -->
+        <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Ketik: Nama, Kelas, NISN, Ayah, Alamat...">
     </div>
 
     <div class="table-container">
@@ -132,6 +138,10 @@
 </div>
 
 <script>
+    // Variabel untuk tracking sorting
+    let lastSortedCol = -1;
+    let lastSortDirection = 'asc'; 
+
     if (typeof XLSX === 'undefined') {
         document.getElementById('error-message').style.display = 'block';
         document.querySelector('.upload-section').style.display = 'none';
@@ -166,7 +176,6 @@
                     throw new Error("File terlalu pendek atau format salah.");
                 }
 
-                // 1. Cari Header Utama (Baris yang ada "No" dan "Nama")
                 let mainHeaderIndex = -1;
                 for (let i = 0; i < jsonData.length; i++) {
                     const row = jsonData[i];
@@ -180,35 +189,27 @@
                     throw new Error("Header 'No' dan 'Nama' tidak ditemukan.");
                 }
 
-                // 2. Ambil Baris Header Atas dan Baris Sub-Header (Baris di bawahnya)
                 const topHeaders = jsonData[mainHeaderIndex];
-                const bottomHeaders = jsonData[mainHeaderIndex + 1]; // Baris berikutnya
-                
-                // 3. Mulai Data 2 baris setelah Header Utama
+                const bottomHeaders = jsonData[mainHeaderIndex + 1]; 
                 let dataRows = jsonData.slice(mainHeaderIndex + 2);
 
-                // 4. Filter baris spacer/baris kosong
                 dataRows = dataRows.filter(row => row.length > 0);
 
-                // 5. MERGE HEADER (Gabungkan 2 baris header menjadi 1)
                 const mergedHeaders = [];
                 for (let i = 0; i < topHeaders.length; i++) {
                     const top = (topHeaders[i] === '*' || topHeaders[i] === undefined) ? '' : topHeaders[i];
                     const bottom = (bottomHeaders[i] === '*' || bottomHeaders[i] === undefined) ? '' : bottomHeaders[i];
                     
                     let finalText = "";
-                    
-                    // Logika Penggabungan
                     if (top && bottom) {
-                        finalText = top + " - " + bottom; // Contoh: Data Ayah - Nama
+                        finalText = top + " - " + bottom;
                     } else if (bottom) {
-                        finalText = bottom; // Jika atas kosong, pakai bawah (Contoh: * + Tahun Lahir -> Tahun Lahir)
+                        finalText = bottom;
                     } else if (top) {
-                        finalText = top; // Jika bawah kosong, pakai atas
+                        finalText = top;
                     } else {
-                        finalText = "Kolom " + (i+1); // Fallback
+                        finalText = "Kolom " + (i+1);
                     }
-
                     mergedHeaders.push(finalText);
                 }
 
@@ -232,22 +233,21 @@
     function renderTable(headers, rows) {
         const thead = document.getElementById('tableHead');
         const tbody = document.getElementById('tableBody');
+        thead.innerHTML = "";
+        tbody.innerHTML = "";
+        
         const headerRow = document.createElement('tr');
 
-        // Render Header Gabungan
         headers.forEach((headerText, index) => {
             const th = document.createElement('th');
             th.textContent = headerText;
-            // Jangan sembunyikan kolom, biarkan semua muncul agar user bisa lihat struktur lengkap
+            th.onclick = () => sortTable(index);
             headerRow.appendChild(th);
         });
         thead.appendChild(headerRow);
 
-        // Render Body
         rows.forEach(row => {
             const tr = document.createElement('tr');
-            
-            // Loop berdasarkan jumlah headers agar kolom sejajar penuh
             for (let i = 0; i < headers.length; i++) {
                 const td = document.createElement('td');
                 const cellValue = row[i];
@@ -258,6 +258,8 @@
         });
     }
 
+    // --- FUNGSI SEARCH DIPERBARUI ---
+    // Sekarang mencari di SEMUA kolom baris tersebut
     function searchTable() {
         const input = document.getElementById("searchInput");
         const filter = input.value.toUpperCase();
@@ -265,16 +267,81 @@
         const tr = table.getElementsByTagName("tr");
 
         for (let i = 1; i < tr.length; i++) {
-            let td = tr[i].getElementsByTagName("td")[1]; // Cari di kolom Nama (Index 1)
-            if (td) {
-                let txtValue = td.textContent || td.innerText;
-                if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                    tr[i].style.display = "";
-                } else {
-                    tr[i].style.display = "none";
+            // Ambil semua cell (td) dalam baris ini
+            const tds = tr[i].getElementsByTagName("td");
+            let found = false;
+
+            // Loop melalui setiap cell di baris ini
+            for (let j = 0; j < tds.length; j++) {
+                if (tds[j]) {
+                    let txtValue = tds[j].textContent || tds[j].innerText;
+                    // Jika salah satu cell cocok dengan kata kunci
+                    if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                        found = true;
+                        break; // Cukup ketemu di 1 kolom saja, langsung stop cek
+                    }
                 }
-            }       
+            }
+
+            // Tampilkan jika ditemukan, sembunyikan jika tidak
+            if (found) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
         }
+    }
+    // ---------------------------------
+
+    function sortTable(n) {
+        const table = document.getElementById("dataTable");
+        const tbody = table.querySelector("tbody");
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+
+        if (lastSortedCol === n) {
+            lastSortDirection = (lastSortDirection === 'asc') ? 'desc' : 'asc';
+        } else {
+            lastSortedCol = n;
+            lastSortDirection = 'asc';
+        }
+
+        rows.sort((rowA, rowB) => {
+            let cellA = rowA.getElementsByTagName("td")[n];
+            let cellB = rowB.getElementsByTagName("td")[n];
+            
+            let valA = cellA.textContent.trim();
+            let valB = cellB.textContent.trim();
+
+            const hasLetters = /[a-zA-Z]/;
+
+            if (!hasLetters.test(valA) && !hasLetters.test(valB)) {
+                let numA = parseFloat(valA.replace(/[^0-9.-]+/g,""));
+                let numB = parseFloat(valB.replace(/[^0-9.-]+/g,""));
+
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    return lastSortDirection === 'asc' ? numA - numB : numB - numA;
+                }
+            } 
+
+            valA = valA.toLowerCase();
+            valB = valB.toLowerCase();
+
+            if (valA < valB) return lastSortDirection === 'asc' ? -1 : 1;
+            if (valA > valB) return lastSortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        rows.forEach(row => tbody.appendChild(row));
+
+        const headers = table.querySelectorAll("th");
+        headers.forEach((th, index) => {
+            if (index === n) {
+                th.textContent = th.textContent.replace(" ▲", "").replace(" ▼", "");
+                th.textContent += lastSortDirection === 'asc' ? " ▲" : " ▼";
+            } else {
+                th.textContent = th.textContent.replace(" ▲", "").replace(" ▼", "");
+            }
+        });
     }
 </script>
 
