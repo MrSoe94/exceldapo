@@ -3,200 +3,434 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Baca Data Siswa (Excel Dapodik)</title>
+    <title>Sistem Manajemen Data Siswa</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
+        :root {
+            --primary: #0056b3;
+            --secondary: #007bff;
+            --accent: #ffc107;
+            --success: #28a745;
+            --danger: #dc3545;
+            --light: #f8f9fa;
+            --dark: #343a40;
+            --border: #dee2e6;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f4f4f9;
             margin: 0;
             padding: 20px;
+            color: #333;
         }
+
         .container {
             max-width: 100%; 
             margin: 0 auto;
             background: white;
-            padding: 20px;
+            padding: 25px;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-        h1 {
-            color: #333;
-            text-align: center;
+
+        h1 { 
+            color: var(--primary); 
+            text-align: center; 
+            margin-bottom: 30px;
+            font-size: 24px;
         }
+        
+        /* Upload Section */
         .upload-section {
-            border: 2px dashed #007bff;
+            border: 2px dashed var(--secondary);
             padding: 40px;
             text-align: center;
-            margin-bottom: 20px;
-            border-radius: 5px;
+            margin-bottom: 25px;
+            border-radius: 8px;
             background-color: #f9faff;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all 0.3s ease;
         }
-        .upload-section:hover {
-            background-color: #e6f0ff;
+        .upload-section:hover { 
+            background-color: #e6f0ff; 
+            border-color: var(--primary);
         }
-        input[type="file"] {
-            display: none;
-        }
+        input[type="file"] { display: none; }
+        
+        /* Controls */
         .controls {
             margin-bottom: 20px;
             display: none; 
             gap: 10px;
             align-items: center;
             flex-wrap: wrap;
+            padding: 15px;
+            background: #f1f1f1;
+            border-radius: 6px;
         }
+        
+        .search-wrapper {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
         input[type="text"] {
             padding: 10px;
-            font-size: 16px;
-            width: 350px; 
+            font-size: 14px;
+            width: 100%;
+            max-width: 400px; 
             border: 1px solid #ccc;
             border-radius: 4px;
         }
-        .btn-delete {
-            padding: 10px 20px;
-            background-color: #dc3545; 
-            color: white;
+        
+        /* Buttons */
+        .btn-action {
+            padding: 10px 18px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
-            font-weight: bold;
+            font-weight: 600;
+            color: white;
+            transition: background 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
         }
-        .btn-delete:hover {
-            background-color: #c82333;
+        
+        .btn-delete { background-color: var(--danger); }
+        .btn-delete:hover { background-color: #c82333; }
+        
+        .btn-export { background-color: var(--success); }
+        .btn-export:hover { background-color: #218838; }
+        
+        .btn-preview { background-color: var(--accent); color: #212529; }
+        .btn-preview:hover { background-color: #e0a800; }
+        
+        .btn-stat { 
+            background-color: var(--dark); 
+            font-size: 12px;
+            padding: 8px 12px;
         }
-        .btn-export {
-            padding: 10px 20px;
-            background-color: #28a745; 
+        .btn-stat:hover { background-color: #23272b; }
+        
+        .btn-view {
+            padding: 6px 12px;
+            background-color: #17a2b8;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
+            font-size: 12px;
         }
-        .btn-export:hover {
-            background-color: #218838;
+        .btn-view:hover { background-color: #138496; }
+
+        .btn-primary {
+            background-color: var(--primary);
+        }
+        .btn-primary:hover {
+            background-color: #004494;
+        }
+
+        /* Main Table */
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+            max-height: 600px;
+            display: none;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
             font-size: 13px;
-            display: none; 
+            background: white;
         }
+        
         th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
+            border: 1px solid var(--border);
+            padding: 10px;
             text-align: left;
             white-space: nowrap; 
-            overflow-x: hidden; 
         }
-        th:first-child, td:first-child {
-            width: 50px;
-            text-align: center;
-        }
-        th:nth-child(2), td:nth-child(2) {
-            width: 50px;
-            text-align: center;
-            font-weight: bold;
-        }
-
+        
         th {
-            background-color: #0056b3;
+            background-color: var(--primary);
             color: white;
             position: sticky;
             top: 0;
             z-index: 10;
-            font-size: 11px;
-            cursor: pointer; 
+            font-size: 12px;
+            font-weight: 600;
             user-select: none;
         }
-        th:hover {
-            background-color: #004494;
+        th:hover { background-color: #004494; }
+        
+        /* Specific Column Widths */
+        th:first-child, td:first-child { width: 40px; text-align: center; }
+        th:nth-child(2), td:nth-child(2) { width: 40px; text-align: center; }
+        th:last-child, td:last-child { width: 80px; text-align: center; }
+
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        tr:hover { background-color: #e6f0ff; }
+        
+        .status-msg { text-align: center; margin-top: 10px; padding: 10px; border-radius: 4px; }
+        .error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; display: none; }
+        .success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; font-weight: bold; }
+
+        /* Stats Table Styles */
+        .stats-result-container {
+            display: none; /* Hidden by default */
+            margin-top: 20px;
         }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
+        
+        .stats-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
-        tr:hover {
-            background-color: #e6f0ff;
-        }
-        .error {
-            color: red;
-            text-align: center;
-            margin-top: 10px;
-        }
-        .success {
-            color: green;
-            text-align: center;
-            margin-top: 10px;
+        
+        .stats-header {
+            background: #e9ecef;
+            padding: 10px 15px;
             font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
         }
-        .table-container {
-            overflow-x: auto; 
-            height: 600px;
+
+        .stats-table-inner {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
         }
-        #error-message {
-            color: red;
-            background: #ffe6e6;
-            padding: 10px;
-            border: 1px solid red;
-            display: none;
+        .stats-table-inner th, .stats-table-inner td {
+            padding: 8px;
+            border: 1px solid #dee2e6;
             text-align: center;
         }
+        .stats-table-inner th { background-color: var(--secondary); }
+        .stats-table-inner td:first-child { text-align: left; font-weight: bold; }
+        .stats-table-inner tr:nth-child(even) { background-color: #f8f9fa; }
+        .stats-table-inner tr:hover { background-color: #e9ecef; }
+
+        /* --- MODAL STYLES --- */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; top: 0;
+            width: 100%; height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.5); 
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from {opacity: 0} to {opacity: 1}
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto; 
+            padding: 25px;
+            border: 1px solid #888;
+            width: 90%; 
+            max-width: 1000px;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 20px;
+        }
+        .close:hover, .close:focus { color: black; }
+        
+        .modal-header { 
+            border-bottom: 2px solid #eee; 
+            margin-bottom: 20px; 
+            padding-bottom: 10px; 
+        }
+
+        /* Mapping Form */
+        .mapping-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        /* Detail Rows */
+        .detail-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 10px;
+            margin-bottom: 10px;
+            border-bottom: 1px dashed #eee;
+            padding-bottom: 5px;
+        }
+        .detail-label { font-weight: bold; color: #555; }
+        .detail-value { color: #333; word-wrap: break-word; }
+
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>📂 Pembaca Data Siswa (Excel Dapodik)</h1>
+    <h1>📂 Sistem Pembaca Data Siswa (Excel Dapodik)</h1>
     
-    <div id="error-message">Gagal memuat library Excel. Cek internet Anda.</div>
-    
+    <!-- Error Message Container -->
+    <div id="global-error" class="status-msg error"></div>
+
+    <!-- Upload Section -->
     <div class="upload-section" onclick="document.getElementById('fileInput').click()">
-        <p>Klik di sini untuk memilih file Excel (.xlsx)</p>
+        <p style="margin:0; font-size:16px; color:#555;">📂 <strong>Klik di sini</strong> untuk memilih file Excel (.xlsx)</p>
         <input type="file" id="fileInput" accept=".xlsx, .xls" onchange="handleFile(this)">
-        <div id="message"></div>
+        <div id="message" class="status-msg"></div>
     </div>
 
+    <!-- Controls Toolbar -->
     <div class="controls" id="controls">
-        <label>Cari Data:</label>
-        <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Ketik: Nama, Kelas, NISN...">
+        <div class="search-wrapper">
+            <label>🔍 Cari:</label>
+            <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Ketik Nama, NISN, Kelas...">
+        </div>
         
-        <button class="btn-delete" onclick="deleteSelectedRows()">🗑️ Hapus Terpilih</button>
-        <button class="btn-export" onclick="exportToExcel()">📥 Export Excel</button>
+        <button class="btn-action btn-delete" onclick="deleteSelectedRows()">🗑️ Hapus</button>
+        <button class="btn-action btn-export" onclick="exportToExcel()">📥 Export</button>
+        <button class="btn-action btn-preview" onclick="generateTablePreview()">👁️ Preview Table</button>
+        
+        <div style="width: 100%; height: 1px; background: #ddd; margin: 10px 0;"></div>
+        
+        <span style="font-size:14px; font-weight:bold; color:#555; margin-right:5px;">Statistik:</span>
+        <button class="btn-action btn-stat" onclick="initStatsDisplay()">🔄 Generate Semua Statistik</button>
+        <button class="btn-action btn-stat" onclick="openMappingModal()">⚙️ Set Kolom</button>
     </div>
 
-    <div class="table-container">
+    <!-- Main Data Table -->
+    <div class="table-wrapper" id="tableWrapper">
         <table id="dataTable">
             <thead id="tableHead"></thead>
             <tbody id="tableBody"></tbody>
         </table>
     </div>
+
+    <!-- On-Page Stats Section -->
+    <div id="statsResultSection" class="stats-result-container">
+        <h2 style="margin-bottom:15px; color:var(--primary); border-bottom:2px solid #eee; padding-bottom:10px;">Laporan Statistik</h2>
+        <div id="statsContent"></div>
+    </div>
+</div>
+
+<!-- MODAL: Mapping Kolom (Pengganti Prompt) -->
+<div id="mappingModal" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+        <span class="close" onclick="closeModal('mappingModal')">&times;</span>
+        <div class="modal-header">
+            <h2>⚙️ Set Kolom Statistik</h2>
+            <p style="margin:0; font-size:13px; color:#666;">Pilih kolom yang tepat untuk menghasilkan statistik yang akurat.</p>
+        </div>
+        <div id="mappingInfo"></div>
+        <div class="modal-body">
+            <div class="mapping-group">
+                <label for="mapJK">👤 Kolom Jenis Kelamin (JK):</label>
+                <select id="mapJK"></select>
+            </div>
+            <div class="mapping-group">
+                <label for="mapAgama">🙏 Kolom Agama:</label>
+                <select id="mapAgama"></select>
+            </div>
+            <div class="mapping-group">
+                <label for="mapRombel">🏫 Kolom Rombel/Kelas:</label>
+                <select id="mapRombel"></select>
+            </div>
+        </div>
+
+        <div style="text-align: right; margin-top:20px;">
+            <button class="btn-action btn-delete" onclick="closeModal('mappingModal')">Batal</button>
+            <button class="btn-action btn-primary" onclick="saveMapping()">Simpan & Tampilkan</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Detail Siswa -->
+<div id="detailModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('detailModal')">&times;</span>
+        <div class="modal-header">
+            <h2 id="modalTitle">Detail Siswa</h2>
+        </div>
+        <div id="modalBody"></div>
+    </div>
+</div>
+
+<!-- MODAL: Preview Table (Clean) -->
+<div id="previewModal" class="modal">
+    <div class="modal-content" style="max-width: 95%;">
+        <span class="close" onclick="closeModal('previewModal')">&times;</span>
+        <div class="modal-header">
+            <h2>Preview Tabel</h2>
+            <p style="margin:0; font-size:13px; color:#666;">Versi bersih dari data yang sedang tampil.</p>
+        </div>
+        <div id="previewBody" style="max-height: 70vh; overflow: auto;"></div>
+    </div>
 </div>
 
 <script>
+    // --- GLOBAL VARIABLES ---
     let lastSortedCol = -1;
     let lastSortDirection = 'asc'; 
+    let currentHeaders = []; 
+    let columnMapping = { jk: null, agama: null, rombel: null };
 
-    if (typeof XLSX === 'undefined') {
-        document.getElementById('error-message').style.display = 'block';
-        document.querySelector('.upload-section').style.display = 'none';
-    }
-
+    // --- FILE HANDLING ---
     function handleFile(input) {
         const file = input.files[0];
         const messageDiv = document.getElementById('message');
-        const table = document.getElementById('dataTable');
+        const tableWrapper = document.getElementById('tableWrapper');
         const controls = document.getElementById('controls');
+        const statsSection = document.getElementById('statsResultSection');
         
+        // Reset UI
         messageDiv.innerHTML = "";
-        table.style.display = 'none';
+        messageDiv.className = "status-msg";
+        tableWrapper.style.display = 'none';
         controls.style.display = 'none';
+        statsSection.style.display = 'none';
         document.getElementById('tableHead').innerHTML = "";
         document.getElementById('tableBody').innerHTML = "";
+        document.getElementById('statsContent').innerHTML = "";
+        
+        // Reset Mapping
+        columnMapping = { jk: null, agama: null, rombel: null };
 
         if (!file) return;
 
@@ -207,7 +441,8 @@
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, {type: 'array'});
                 
-                const sheetName = workbook.SheetNames.find(name => name.includes("Daftar Peserta Didik")) || workbook.SheetNames[0];
+                // Cari sheet yang relevan
+                const sheetName = workbook.SheetNames.find(name => name.toLowerCase().includes("peserta") || name.toLowerCase().includes("daftar")) || workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
                 const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
 
@@ -215,6 +450,7 @@
                     throw new Error("File terlalu pendek atau format salah.");
                 }
 
+                // Cari Header Utama
                 let mainHeaderIndex = -1;
                 for (let i = 0; i < jsonData.length; i++) {
                     const row = jsonData[i];
@@ -225,15 +461,18 @@
                 }
 
                 if (mainHeaderIndex === -1) {
-                    throw new Error("Header 'No' dan 'Nama' tidak ditemukan.");
+                    throw new Error("Header 'No' dan 'Nama' tidak ditemukan. Pastikan format Excel sesuai.");
                 }
 
+                // Proses Header
                 const topHeaders = jsonData[mainHeaderIndex];
                 const bottomHeaders = jsonData[mainHeaderIndex + 1]; 
                 let dataRows = jsonData.slice(mainHeaderIndex + 2);
 
-                dataRows = dataRows.filter(row => row.length > 0);
+                // Hapus baris kosong
+                dataRows = dataRows.filter(row => row.length > 0 && row.some(cell => cell !== undefined && cell !== ''));
 
+                // Gabungkan Header
                 const mergedHeaders = [];
                 for (let i = 0; i < topHeaders.length; i++) {
                     const top = (topHeaders[i] === '*' || topHeaders[i] === undefined) ? '' : topHeaders[i];
@@ -253,38 +492,47 @@
                 }
 
                 renderTable(mergedHeaders, dataRows);
-                
-                messageDiv.className = "success";
-                messageDiv.innerText = `Berhasil! Ditemukan ${dataRows.length} data siswa.`;
-                table.style.display = 'table';
+
+                messageDiv.className = "status-msg success";
+                messageDiv.innerText = `✅ Berhasil! Ditemukan ${dataRows.length} data siswa. Silakan atur kolom statistik.`;
+                tableWrapper.style.display = 'block';
                 controls.style.display = 'flex';
+
+                // Auto open mapping modal for first time use
+                openMappingModal();
 
             } catch (error) {
                 console.error(error);
-                messageDiv.className = "error";
-                messageDiv.innerText = error.message || "Gagal membaca file.";
+                messageDiv.className = "status-msg error";
+                messageDiv.innerText = "❌ " + (error.message || "Gagal membaca file.");
             }
         };
 
         reader.readAsArrayBuffer(file);
     }
 
+    // --- TABLE RENDERING ---
     function renderTable(headers, rows) {
         const thead = document.getElementById('tableHead');
         const tbody = document.getElementById('tableBody');
         
-        // PERBAIKAN DI SINI: Mengubah 'constad.innerHTML' menjadi 'thead.innerHTML'
+        // FIX PERBAIKAN DISINI: Mengubah 'constad' menjadi 'thead'
         thead.innerHTML = ""; 
         tbody.innerHTML = "";
         
+        currentHeaders = headers; 
+        
         const headerRow = document.createElement('tr');
-
+        
+        // Kolom Checkbox
         const thSelect = document.createElement('th');
         thSelect.textContent = "Pilih";
-        thSelect.onclick = null; 
+        thSelect.style.width = "50px";
+        thSelect.style.textAlign = "center";
         thSelect.style.cursor = "default";
         headerRow.appendChild(thSelect);
 
+        // Kolom Data
         headers.forEach((headerText, index) => {
             const th = document.createElement('th');
             th.textContent = headerText;
@@ -293,14 +541,26 @@
                 th.style.cursor = "default";
             } else {
                 th.onclick = () => sortTable(index);
+                th.style.cursor = "pointer";
             }
             headerRow.appendChild(th);
         });
+
+        // Kolom Aksi
+        const thDetail = document.createElement('th');
+        thDetail.textContent = "Detail";
+        thDetail.style.width = "80px";
+        thDetail.style.textAlign = "center";
+        thDetail.style.cursor = "default";
+        headerRow.appendChild(thDetail);
+
         thead.appendChild(headerRow);
 
+        // Isi Baris
         rows.forEach(row => {
             const tr = document.createElement('tr');
 
+            // Checkbox
             const tdCheck = document.createElement('td');
             tdCheck.style.textAlign = 'center';
             const checkbox = document.createElement('input');
@@ -309,16 +569,426 @@
             tdCheck.appendChild(checkbox);
             tr.appendChild(tdCheck);
 
+            // Data Cells
             for (let i = 0; i < headers.length; i++) {
                 const td = document.createElement('td');
                 const cellValue = row[i];
                 td.textContent = (cellValue !== undefined && cellValue !== '*') ? cellValue : '-';
                 tr.appendChild(td);
             }
+
+            // Tombol Detail
+            const tdDetail = document.createElement('td');
+            tdDetail.style.textAlign = 'center';
+            const btnDetail = document.createElement('button');
+            btnDetail.className = "btn-view";
+            btnDetail.textContent = "👁️";
+            btnDetail.title = "Lihat Detail";
+            btnDetail.onclick = () => showDetail(row);
+            tdDetail.appendChild(btnDetail);
+            tr.appendChild(tdDetail);
+
             tbody.appendChild(tr);
         });
 
         renumberTable();
+    }
+
+    // --- MAPPING & STATS LOGIC ---
+
+    function openMappingModal() {
+        const modal = document.getElementById('mappingModal');
+        const selJK = document.getElementById('mapJK');
+        const selAgama = document.getElementById('mapAgama');
+        const selRombel = document.getElementById('mapRombel');
+
+        // Clear options
+        [selJK, selAgama, selRombel].forEach(sel => sel.innerHTML = "");
+
+        // Populate Headers
+        currentHeaders.forEach((h, index) => {
+            const opt1 = new Option(`${index + 1}. ${h}`, index);
+            const opt2 = new Option(`${index + 1}. ${h}`, index);
+            const opt3 = new Option(`${index + 1}. ${h}`, index);
+            
+            selJK.add(opt1);
+            selAgama.add(opt2);
+            selRombel.add(opt3);
+        });
+
+        // Auto-detect best columns
+        const autoDetected = autoDetectColumns();
+        
+        // Set auto-detected values
+        if(autoDetected.jk !== null) selJK.value = autoDetected.jk;
+        if(autoDetected.agama !== null) selAgama.value = autoDetected.agama;
+        if(autoDetected.rombel !== null) selRombel.value = autoDetected.rombel;
+
+        // Show detection info
+        const infoDiv = document.getElementById('mappingInfo');
+        if(infoDiv) {
+            infoDiv.innerHTML = `
+                <div style="background: #e3f2fd; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 12px;">
+                    <strong>🤖 Auto-Detection:</strong><br>
+                    JK: ${autoDetected.jk !== null ? `Index ${autoDetected.jk} (${currentHeaders[autoDetected.jk]})` : 'Tidak ditemukan'}<br>
+                    Agama: ${autoDetected.agama !== null ? `Index ${autoDetected.agama} (${currentHeaders[autoDetected.agama]})` : 'Tidak ditemukan'}<br>
+                    Rombel: ${autoDetected.rombel !== null ? `Index ${autoDetected.rombel} (${currentHeaders[autoDetected.rombel]})` : 'Tidak ditemukan'}
+                </div>
+            `;
+        }
+
+        modal.style.display = "block";
+    }
+
+    function autoDetectColumns() {
+        const tbody = document.getElementById('tableBody');
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+        const firstRow = rows[0]?.querySelectorAll('td');
+        
+        if (!firstRow || firstRow.length === 0) {
+            return { jk: null, agama: null, rombel: null };
+        }
+
+        let jkIndex = null;
+        let agamaIndex = null;
+        let rombelIndex = null;
+
+        // Detect JK column (contains L/P)
+        currentHeaders.forEach((h, i) => {
+            const sample = firstRow[i + 2]?.textContent.trim();
+            if (sample && (sample === 'L' || sample === 'P' || sample.toLowerCase().includes('laki') || sample.toLowerCase().includes('perempuan'))) {
+                jkIndex = i;
+            }
+        });
+
+        // Detect Agama column (contains religion keywords)
+        const agamaKeywords = ['Islam', 'Kristen', 'Katolik', 'Hindu', 'Budha', 'Konghucu', 'Protestan'];
+        currentHeaders.forEach((h, i) => {
+            const sample = firstRow[i + 2]?.textContent.trim();
+            if (sample && agamaKeywords.some(k => sample.includes(k))) {
+                agamaIndex = i;
+            }
+        });
+
+        // Detect Rombel column (contains class/grade info)
+        currentHeaders.forEach((h, i) => {
+            const sample = firstRow[i + 2]?.textContent.trim();
+            if (sample && (sample.includes('KELAS') || sample.includes('ROMBEL') || /\d+[A-Z]/i.test(sample))) {
+                rombelIndex = i;
+            }
+        });
+
+        return { jk: jkIndex, agama: agamaIndex, rombel: rombelIndex };
+    }
+
+    function saveMapping() {
+        columnMapping.jk = parseInt(document.getElementById('mapJK').value);
+        columnMapping.agama = parseInt(document.getElementById('mapAgama').value);
+        columnMapping.rombel = parseInt(document.getElementById('mapRombel').value);
+
+        // Validate mapping
+        const validation = validateMapping();
+        if (!validation.isValid) {
+            alert('⚠️ ' + validation.message);
+            return;
+        }
+
+        closeModal('mappingModal');
+        initStatsDisplay();
+    }
+
+    function validateMapping() {
+        const tbody = document.getElementById('tableBody');
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+        const firstRow = rows[0]?.querySelectorAll('td');
+        
+        if (!firstRow || firstRow.length === 0) {
+            return { isValid: false, message: 'Tidak ada data untuk divalidasi.' };
+        }
+
+        // Check JK column
+        const jkSample = firstRow[columnMapping.jk + 2]?.textContent.trim();
+        if (!jkSample || (!jkSample.includes('L') && !jkSample.includes('P'))) {
+            return { isValid: false, message: 'Kolom JK tidak valid. Harus mengandung "L" atau "P".' };
+        }
+
+        // Check Agama column
+        const agamaSample = firstRow[columnMapping.agama + 2]?.textContent.trim();
+        const agamaKeywords = ['Islam', 'Kristen', 'Katolik', 'Hindu', 'Budha', 'Konghucu', 'Protestan'];
+        if (!agamaSample || !agamaKeywords.some(k => agamaSample.includes(k))) {
+            return { isValid: false, message: 'Kolom Agama tidak valid. Harus mengandung nama agama (Islam, Kristen, dll).' };
+        }
+
+        // Check Rombel column
+        const rombelSample = firstRow[columnMapping.rombel + 2]?.textContent.trim();
+        if (!rombelSample || (!rombelSample.includes('KELAS') && !rombelSample.includes('ROMBEL') && !/\d+[A-Z]/i.test(rombelSample))) {
+            return { isValid: false, message: 'Kolom Rombel tidak valid. Harus mengandung informasi kelas/rombel.' };
+        }
+
+        return { isValid: true, message: 'Mapping valid!' };
+    }
+
+    function initStatsDisplay() {
+        if (columnMapping.jk === null || columnMapping.agama === null || columnMapping.rombel === null) {
+            openMappingModal();
+            return;
+        }
+        displayAllStatsOnPage();
+    }
+
+    // Core Logic: Calculate Data based on mapping
+    function getStatsData(type) {
+        const tbody = document.getElementById('tableBody');
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+        const visibleRows = rows.filter(row => row.style.display !== "none");
+
+        if (visibleRows.length === 0) return null;
+
+        let dataMap = {}; 
+        let uniqueCats = new Set(); 
+
+        visibleRows.forEach(tr => {
+            const cells = tr.querySelectorAll('td');
+            
+            // +2 because: index 0 is checkbox, index 1 is actually col 0 (No), so col N is at N+2
+            const jkVal = cells[columnMapping.jk + 2].textContent.trim();
+            const agamaVal = cells[columnMapping.agama + 2].textContent.trim();
+            const rombelVal = cells[columnMapping.rombel + 2].textContent.trim();
+
+            let categoryKey = "";
+            if (type.includes('rombel')) {
+                categoryKey = rombelVal.replace("KELAS ", "").trim();
+            } else {
+                const match = rombelVal.match(/\d+/);
+                categoryKey = match ? "Kelas " + match[0] : "Lainnya";
+            }
+
+            if (!dataMap[categoryKey]) {
+                if (type.includes('rombel')) {
+                    dataMap[categoryKey] = { L: 0, P: 0, agamaCounts: {} };
+                } else if (type.includes('gender')) {
+                    dataMap[categoryKey] = { L: 0, P: 0 };
+                } else {
+                    dataMap[categoryKey] = { agamaCounts: {} };
+                }
+            }
+
+            // Count Gender
+            const jkLower = jkVal.toLowerCase();
+            if (jkLower.includes('l') || jkLower.includes('laki')) dataMap[categoryKey].L++;
+            if (jkLower.includes('p') || jkLower.includes('perempuan')) dataMap[categoryKey].P++;
+
+            // Count Religion
+            if (agamaVal && agamaVal !== '-') {
+                uniqueCats.add(agamaVal);
+                if (!dataMap[categoryKey].agamaCounts) {
+                    dataMap[categoryKey].agamaCounts = {};
+                }
+                if (!dataMap[categoryKey].agamaCounts[agamaVal]) {
+                    dataMap[categoryKey].agamaCounts[agamaVal] = 0;
+                }
+                dataMap[categoryKey].agamaCounts[agamaVal]++;
+            }
+        });
+
+        return { dataMap, uniqueCats: Array.from(uniqueCats).sort() };
+    }
+
+    function displayAllStatsOnPage() {
+        const statsSection = document.getElementById('statsResultSection');
+        const statsContent = document.getElementById('statsContent');
+        // ... (rest of the code remains the same)
+        
+        let html = "";
+        const types = [
+            { id: 'gender-kelas', title: 'Statistik Gender per Kelas' },
+            { id: 'agama-kelas', title: 'Statistik Agama per Kelas' },
+            { id: 'gender-rombel', title: 'Statistik Gender per Rombel' },
+            { id: 'agama-rombel', title: 'Statistik Agama per Rombel' }
+        ];
+
+        types.forEach(t => {
+            const data = getStatsData(t.id);
+            if(data) {
+                html += buildStatsHTML(t.id, t.title, data.dataMap, data.uniqueCats);
+            }
+        });
+
+        statsContent.innerHTML = html;
+        statsSection.style.display = "block";
+        
+        // Scroll to stats
+        statsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function buildStatsHTML(type, title, dataMap, agamaKeys) {
+        let keys = Object.keys(dataMap).sort((a, b) => {
+            // Sort "Kelas 10" before "Kelas 2" correctly? Or just Alphanumeric
+            return a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'});
+        });
+
+        let html = `
+        <div class="stats-card">
+            <div class="stats-header">
+                <span>${title}</span>
+                <button class="btn-action btn-stat" style="font-size:11px; padding:4px 8px;" onclick="exportSpecificStats('${type}')">📥 Excel</button>
+            </div>
+            <table class="stats-table-inner">
+                <thead><tr>
+                    <th>No</th><th>Kategori</th>`;
+
+        if (type.includes('gender')) {
+            html += `<th>Laki-laki</th><th>Perempuan</th>`;
+        } else {
+            agamaKeys.forEach(k => html += `<th>${k}</th>`);
+        }
+        html += `<th>Jumlah</th></tr></thead><tbody>`;
+
+        let grandTotal = 0;
+        let totalL = 0, totalP = 0;
+
+        keys.forEach((key, idx) => {
+            let item = dataMap[key];
+            html += `<tr><td>${idx+1}</td><td>${key}</td>`;
+            
+            let rowTotal = 0;
+            if (type.includes('gender')) {
+                html += `<td>${item.L}</td><td>${item.P}</td>`;
+                rowTotal = item.L + item.P;
+                totalL += item.L; totalP += item.P;
+            } else {
+                agamaKeys.forEach(k => {
+                    let val = item.agamaCounts[k] || 0;
+                    html += `<td>${val}</td>`;
+                    rowTotal += val;
+                });
+            }
+            
+            html += `<td><strong>${rowTotal}</strong></td></tr>`;
+            grandTotal += rowTotal;
+        });
+
+        // Footer Total
+        html += `<tr style="background:#e9ecef; font-weight:bold;"><td>-</td><td>TOTAL</td>`;
+        if (type.includes('gender')) {
+            html += `<td>${totalL}</td><td>${totalP}</td>`;
+        } else {
+            agamaKeys.forEach(k => {
+                let colTotal = keys.reduce((sum, key) => sum + (dataMap[key].agamaCounts[k] || 0), 0);
+                html += `<td>${colTotal}</td>`;
+            });
+        }
+        html += `<td>${grandTotal}</td></tr>`;
+
+        html += `</tbody></table></div>`;
+        return html;
+    }
+
+    // --- ACTION FUNCTIONS ---
+
+    function generateTablePreview() {
+        const table = document.getElementById("dataTable");
+        const tbody = table.querySelector("tbody");
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+        const headers = Array.from(table.querySelectorAll("th")).map(th => th.textContent);
+
+        const visibleRows = rows.filter(row => row.style.display !== "none");
+
+        if (visibleRows.length === 0) {
+            alert("Tidak ada data yang tampil untuk digenerate.");
+            return;
+        }
+
+        const cleanHeaders = headers.slice(1, -1); 
+
+        let html = "<table class='stats-table-inner'><thead><tr>";
+        cleanHeaders.forEach(h => html += "<th>" + h + "</th>");
+        html += "</tr></thead><tbody>";
+
+        visibleRows.forEach(row => {
+            const cells = Array.from(row.querySelectorAll("td"));
+            html += "<tr>";
+            for(let i=0; i < cleanHeaders.length; i++) {
+                html += "<td>" + cells[i+1].textContent + "</td>";
+            }
+            html += "</tr>";
+        });
+
+        html += "</tbody></table>";
+        html += "<div style='margin-top:10px; text-align:right; font-weight:bold;'>Total Baris: " + visibleRows.length + "</div>";
+
+        document.getElementById("previewBody").innerHTML = html;
+        document.getElementById("previewModal").style.display = "block";
+    }
+
+    function exportSpecificStats(type) {
+        // Find the specific card in the DOM to export
+        // Since we don't have IDs on every card, we rely on the logic to rebuild or just find the table in view.
+        // A simple way: Re-render in a hidden div, export, then remove. 
+        // OR: Just let user use the main display.
+        // Better: Re-create the data and export to excel directly without DOM.
+        
+        const data = getStatsData(type);
+        if(!data) return;
+        
+        let wb = XLSX.utils.book_new();
+        let wsName = "Sheet1";
+        
+        // Construct AoA (Array of Arrays) for SheetJS
+        let aoa = [];
+        
+        // Headers
+        let headerRow = ["No", "Kategori"];
+        if(type.includes('gender')) {
+            headerRow.push("Laki-laki", "Perempuan");
+        } else {
+            headerRow = headerRow.concat(data.uniqueCats);
+        }
+        headerRow.push("Jumlah");
+        aoa.push(headerRow);
+
+        // Rows
+        let keys = Object.keys(data.dataMap).sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
+        let grandTotal = 0;
+        let totalL = 0, totalP = 0;
+
+        keys.forEach((key, idx) => {
+            let row = [idx+1, key];
+            let item = data.dataMap[key];
+            let rowTotal = 0;
+
+            if(type.includes('gender')) {
+                row.push(item.L, item.P);
+                rowTotal = item.L + item.P;
+                totalL += item.L; totalP += item.P;
+            } else {
+                data.uniqueCats.forEach(k => {
+                    let val = item.agamaCounts[k] || 0;
+                    row.push(val);
+                    rowTotal += val;
+                });
+            }
+            row.push(rowTotal);
+            aoa.push(row);
+            grandTotal += rowTotal;
+        });
+
+        // Total Row
+        let totalRow = ["-", "TOTAL"];
+        if(type.includes('gender')) {
+            totalRow.push(totalL, totalP);
+        } else {
+            data.uniqueCats.forEach(k => {
+                let sum = keys.reduce((acc, key) => acc + (data.dataMap[key].agamaCounts[k]||0), 0);
+                totalRow.push(sum);
+            });
+        }
+        totalRow.push(grandTotal);
+        aoa.push(totalRow);
+
+        let ws = XLSX.utils.aoa_to_sheet(aoa);
+        XLSX.utils.book_append_sheet(wb, ws, wsName);
+        XLSX.writeFile(wb, `Statistik_${type}.xlsx`);
     }
 
     function exportToExcel() {
@@ -328,8 +998,7 @@
         const headers = Array.from(table.querySelectorAll("th")).map(th => th.textContent);
 
         const dataToExport = [];
-
-        const exportHeaders = headers.slice(1); 
+        const exportHeaders = headers.slice(1, -1); 
         dataToExport.push(exportHeaders);
 
         let visibleRowCount = 0;
@@ -338,7 +1007,7 @@
                 visibleRowCount++;
                 const cells = Array.from(row.querySelectorAll("td"));
                 const rowData = [];
-                for (let i = 1; i < cells.length; i++) {
+                for (let i = 1; i <= exportHeaders.length; i++) {
                     rowData.push(cells[i].textContent);
                 }
                 dataToExport.push(rowData);
@@ -356,6 +1025,48 @@
 
         const date = new Date().toISOString().slice(0,10);
         XLSX.writeFile(wb, `Data_Siswa_Ekspor_${date}.xlsx`);
+    }
+
+    // --- DETAIL MODAL ---
+    function showDetail(rowData) {
+        const modal = document.getElementById("detailModal");
+        const modalBody = document.getElementById("modalBody");
+        const modalTitle = document.getElementById("modalTitle");
+        
+        // Slice headers to exclude checkbox col and action col
+        const headers = currentHeaders; 
+
+        // Assuming index 1 is Name usually based on standard format
+        const namaSiswa = (rowData[1] !== undefined) ? rowData[1] : "Data Siswa";
+        modalTitle.textContent = "Detail: " + namaSiswa;
+
+        let htmlContent = "";
+        headers.forEach((header, index) => {
+            const cellValue = (rowData[index] !== undefined && rowData[index] !== '*') ? rowData[index] : '-';
+            // Skip empty headers or generic ones if needed
+            if(!header || header.trim() === "") return; 
+
+            htmlContent += `
+                <div class="detail-row">
+                    <div class="detail-label">${header}</div>
+                    <div class="detail-value">${cellValue}</div>
+                </div>
+            `;
+        });
+
+        modalBody.innerHTML = htmlContent;
+        modal.style.display = "block";
+    }
+
+    // --- UTILITIES ---
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = "none";
+    }
+
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = "none";
+        }
     }
 
     function renumberTable() {
@@ -390,10 +1101,12 @@
                 row.remove();
             });
 
-            messageDiv.className = "success";
+            messageDiv.className = "status-msg success";
             messageDiv.innerText = `${checkboxes.length} data berhasil dihapus.`;
-            
             renumberTable();
+            
+            // Hide stats as they are now invalid
+            document.getElementById('statsResultSection').style.display = 'none';
         }
     }
 
@@ -423,7 +1136,6 @@
                 tr[i].style.display = "none";
             }
         }
-
         renumberTable();
     }
 
@@ -442,7 +1154,7 @@
         rows.sort((rowA, rowB) => {
             let cellA = rowA.getElementsByTagName("td")[n + 1];
             let cellB = rowB.getElementsByTagName("td")[n + 1];
-            
+
             let valA = cellA.textContent.trim();
             let valB = cellB.textContent.trim();
 
@@ -455,7 +1167,7 @@
                 if (!isNaN(numA) && !isNaN(numB)) {
                     return lastSortDirection === 'asc' ? numA - numB : numB - numA;
                 }
-            } 
+            }
 
             valA = valA.toLowerCase();
             valB = valB.toLowerCase();
@@ -476,7 +1188,6 @@
                 th.textContent = th.textContent.replace(" ▲", "").replace(" ▼", "");
             }
         });
-
         renumberTable();
     }
 </script>
